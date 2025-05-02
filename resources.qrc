@@ -14,5 +14,6 @@
         <file>images/icons/skip-back.svg</file>
         <file>images/icons/skip-forward.svg</file>
         <file>images/icons/stop.svg</file>
+        <file>images/icons/logo.ico</file>
     </qresource>
 </RCC>

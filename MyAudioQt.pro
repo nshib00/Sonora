@@ -44,6 +44,7 @@ DISTFILES += \
     fonts/Rubik-Regular.ttf \
     images/icons/file.svg \
     images/icons/folder.svg \
+    images/icons/logo.ico \
     images/icons/pause.svg \
     images/icons/play.svg \
     images/icons/refresh-ccw.svg \
