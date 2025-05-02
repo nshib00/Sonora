@@ -15,6 +15,7 @@ public:
     void setPlaylist(const QStringList &files);
     QString currentTrack() const;
     bool hasTracks() const;
+    QStringList getPlaylist();
 
     void playTrack(int index);
     void playNext();

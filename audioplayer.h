@@ -32,7 +32,7 @@ private slots:
     void updatePosition(qint64 position);
     void updateDuration(qint64 duration);
     void setPosition(int position);
-    void updateTimeLabel();
+    void updateTimeLabels();
     void updateMetaData();
     void openFolder();
     void applyStyles();
@@ -68,7 +68,8 @@ private:
     QSlider *progressSlider;
     QSlider *volumeSlider;
 
-    QLabel *timeLabel;
+    QLabel *leftTimeLabel;
+    QLabel *rightTimeLabel;
     QLabel *trackTitleLabel;
     QLabel *albumTitleLabel;
     QLabel *coverArtLabel;

@@ -17,35 +17,56 @@
 #include <QFileInfo>
 #include <QTextStream>
 #include <QDebug>
+#include <QtSvg/QSvgRenderer>
+#include <QPainter>
 
-AudioPlayer::AudioPlayer(QWidget *parent)
-    : QWidget(parent)
+AudioPlayer::AudioPlayer(QWidget *parent) : QWidget(parent)
 {
+    setWindowTitle("Sonora");
+    setAcceptDrops(true);
     setupUi();
     setupConnections();
 }
 
+QIcon loadColoredIcon(const QString &resourcePath, const QColor &color)
+{
+    QSvgRenderer renderer(resourcePath);
+
+    QSize svgSize = renderer.defaultSize();
+    if (!svgSize.isValid()) svgSize = QSize(64, 64);
+
+    QPixmap pixmap(svgSize);
+    pixmap.fill(Qt::transparent);
+
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing);
+    renderer.render(&painter);
+    painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
+    painter.fillRect(pixmap.rect(), color);
+    painter.end();
+
+    return QIcon(pixmap);
+}
+
 void AudioPlayer::setupUi()
 {
-    setWindowTitle("Sonora");
-    setAcceptDrops(true);
-
     player = new QMediaPlayer(this);
     trackManager = new TrackManager(this);
 
     openButton = new QPushButton;
-    openButton->setIcon(style()->standardIcon(QStyle::SP_DirOpenIcon));
+    openButton->setIcon(loadColoredIcon(":/images/icons/file.svg", Qt::white));
 
-    openFolderButton = new QPushButton("Открыть папку");
+    openFolderButton = new QPushButton;
+    openFolderButton->setIcon(loadColoredIcon(":/images/icons/folder.svg", Qt::white));
 
     playButton = new QPushButton;
-    playButton->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
+    playButton->setIcon(loadColoredIcon(":/images/icons/play.svg", Qt::white));
 
     pauseButton = new QPushButton;
-    pauseButton->setIcon(style()->standardIcon(QStyle::SP_MediaPause));
+    pauseButton->setIcon(loadColoredIcon(":/images/icons/pause.svg", Qt::white));
 
     stopButton = new QPushButton;
-    stopButton->setIcon(style()->standardIcon(QStyle::SP_MediaStop));
+    stopButton->setIcon(loadColoredIcon(":/images/icons/stop.svg", Qt::white));
 
     progressSlider = new QSlider(Qt::Horizontal);
     progressSlider->setRange(0, 0);
@@ -55,7 +76,8 @@ void AudioPlayer::setupUi()
     volumeSlider->setValue(50);
     player->setVolume(50);
 
-    timeLabel = new QLabel("00:00 / 00:00");
+    leftTimeLabel = new QLabel("00:00");
+    rightTimeLabel = new QLabel("00:00");
 
     trackTitleLabel = new QLabel("Трек не выбран");
     trackTitleLabel->setAlignment(Qt::AlignCenter);
@@ -69,48 +91,55 @@ void AudioPlayer::setupUi()
     coverArtLabel->setPixmap(QPixmap());
 
     trackListWidget = new QListWidget;
-    trackListWidget->setMaximumSize(200, 400);
+    trackListWidget->setMinimumWidth(200);
+    trackListWidget->setMaximumWidth(400);
 
     prevButton = new QPushButton;
-    prevButton->setIcon(style()->standardIcon(QStyle::SP_MediaSkipBackward));
+    prevButton->setIcon(loadColoredIcon(":/images/icons/skip-back.svg", Qt::white));
 
     nextButton = new QPushButton;
-    nextButton->setIcon(style()->standardIcon(QStyle::SP_MediaSkipForward));
+    nextButton->setIcon(loadColoredIcon(":/images/icons/skip-forward.svg", Qt::white));
 
     repeatButton = new QPushButton;
-    repeatButton->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
+    repeatButton->setIcon(loadColoredIcon(":/images/icons/refresh-ccw.svg", Qt::white));
 
     shuffleButton = new QPushButton;
-    shuffleButton->setText("🔀 выкл");
+    shuffleButton->setIcon(loadColoredIcon(":/images/icons/shuffle.svg", Qt::white));
+    shuffleButton->setText(" выкл");
+
+    auto *openAudioLayout = new QHBoxLayout;
+    openAudioLayout->addWidget(openButton);
+    openAudioLayout->addWidget(openFolderButton);
+    openAudioLayout->addStretch();
 
     auto *buttonsLayout = new QHBoxLayout;
-    buttonsLayout->addWidget(openButton);
-    buttonsLayout->addWidget(playButton);
-    buttonsLayout->addWidget(pauseButton);
-    buttonsLayout->addWidget(stopButton);
     buttonsLayout->addWidget(repeatButton);
     buttonsLayout->addWidget(shuffleButton);
-
-    auto *folderLayout = new QHBoxLayout;
-    folderLayout->addWidget(openFolderButton);
 
     auto *volumeLayout = new QHBoxLayout;
     volumeLayout->addWidget(new QLabel("Громкость"));
     volumeLayout->addWidget(volumeSlider);
 
+    auto *timeLayout = new QHBoxLayout;
+    timeLayout->addWidget(leftTimeLabel);
+    timeLayout->addWidget(progressSlider);
+    timeLayout->addWidget(rightTimeLabel);
+
     auto *navLayout = new QHBoxLayout;
     navLayout->addWidget(prevButton);
-    navLayout->addWidget(progressSlider);
+    navLayout->addWidget(playButton);
+    navLayout->addWidget(pauseButton);
+    navLayout->addWidget(stopButton);
     navLayout->addWidget(nextButton);
 
     auto *leftLayout = new QVBoxLayout;
-    leftLayout->addWidget(coverArtLabel, 0, Qt::AlignCenter);
+    leftLayout->addLayout(openAudioLayout);
+    leftLayout->addWidget(coverArtLabel, 1, Qt::AlignCenter);
     leftLayout->addWidget(trackTitleLabel);
     leftLayout->addWidget(albumTitleLabel);
     leftLayout->addLayout(buttonsLayout);
-    leftLayout->addLayout(folderLayout);
+    leftLayout->addLayout(timeLayout);
     leftLayout->addLayout(navLayout);
-    leftLayout->addWidget(timeLabel);
     leftLayout->addLayout(volumeLayout);
 
     auto *mainLayout = new QHBoxLayout(this);
@@ -119,6 +148,7 @@ void AudioPlayer::setupUi()
 
     applyStyles();
 }
+
 
 void AudioPlayer::setupConnections()
 {
@@ -260,14 +290,14 @@ void AudioPlayer::updatePosition(qint64 position)
     if (!progressSlider->isSliderDown()) {
         progressSlider->setValue(static_cast<int>(position));
     }
-    updateTimeLabel();
+    updateTimeLabels();
 }
 
 void AudioPlayer::updateDuration(qint64 dur)
 {
     duration = dur;
     progressSlider->setRange(0, static_cast<int>(duration));
-    updateTimeLabel();
+    updateTimeLabels();
 }
 
 void AudioPlayer::setPosition(int position)
@@ -275,7 +305,7 @@ void AudioPlayer::setPosition(int position)
     player->setPosition(position);
 }
 
-void AudioPlayer::updateTimeLabel()
+void AudioPlayer::updateTimeLabels()
 {
     QTime currentTime((player->position() / 3600000) % 60,
                       (player->position() / 60000) % 60,
@@ -285,11 +315,14 @@ void AudioPlayer::updateTimeLabel()
                     (duration / 1000) % 60);
 
     QString format = (duration > 3600000) ? "hh:mm:ss" : "mm:ss";
-    timeLabel->setText(currentTime.toString(format) + " / " + totalTime.toString(format));
+    leftTimeLabel->setText(currentTime.toString(format));
+    rightTimeLabel->setText(totalTime.toString(format));
 }
 
 void AudioPlayer::updateMetaData()
 {
+    qDebug() << player->availableMetaData();
+
     QString artist = player->metaData(QMediaMetaData::Author).toString();
     QString title = player->metaData(QMediaMetaData::Title).toString();
     QString albumTitle = player->metaData(QMediaMetaData::AlbumTitle).toString();

@@ -113,3 +113,58 @@ QPushButton#shuffleButton {
 QPushButton#shuffleButton:checked {
     background-color: #333333;
 }
+
+QListWidget QScrollBar:vertical {
+    background: #2b2b2b;
+    width: 10px;
+    margin: 2px 0 2px 0;
+    border-radius: 5px;
+}
+
+QListWidget QScrollBar::handle:vertical {
+    background: #606060;
+    min-height: 20px;
+    border-radius: 5px;
+}
+
+QListWidget QScrollBar::handle:vertical:hover {
+    background: #888888;
+}
+
+QListWidget QScrollBar::add-line:vertical,
+QListWidget QScrollBar::sub-line:vertical {
+    height: 0;
+}
+
+QListWidget QScrollBar::add-page:vertical,
+QListWidget QScrollBar::sub-page:vertical {
+    background: none;
+}
+
+QListWidget QScrollBar:horizontal {
+    background: #2b2b2b;
+    height: 10px;
+    margin: 0 2px 0 2px;
+    border-radius: 5px;
+}
+
+QListWidget QScrollBar::handle:horizontal {
+    background: #606060;
+    min-width: 20px;
+    border-radius: 5px;
+}
+
+QListWidget QScrollBar::handle:horizontal:hover {
+    background: #888888;
+}
+
+QListWidget QScrollBar::add-line:horizontal,
+QListWidget QScrollBar::sub-line:horizontal {
+    width: 0;
+}
+
+QListWidget QScrollBar::add-page:horizontal,
+QListWidget QScrollBar::sub-page:horizontal {
+    background: none;
+}
+

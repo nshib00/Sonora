@@ -1,4 +1,4 @@
-QT       += core gui multimedia
+QT       += core gui multimedia svg
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -42,4 +42,13 @@ DISTFILES += \
     fonts/Rubik-Light.ttf \
     fonts/Rubik-Medium.ttf \
     fonts/Rubik-Regular.ttf \
+    images/icons/file.svg \
+    images/icons/folder.svg \
+    images/icons/pause.svg \
+    images/icons/play.svg \
+    images/icons/refresh-ccw.svg \
+    images/icons/shuffle.svg \
+    images/icons/skip-back.svg \
+    images/icons/skip-forward.svg \
+    images/icons/stop.svg \
     images/placeholder.png

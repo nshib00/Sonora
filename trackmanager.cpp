@@ -13,6 +13,12 @@ void TrackManager::setPlaylist(const QStringList &files)
     emit playlistUpdated(playlist);
 }
 
+QStringList TrackManager::getPlaylist()
+{
+    return playlist;
+}
+
+
 QString TrackManager::currentTrack() const
 {
     if (currentTrackIndex >= 0 && currentTrackIndex < playlist.size()) {

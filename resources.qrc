@@ -5,5 +5,14 @@
         <file>fonts/Rubik-Light.ttf</file>
         <file>fonts/Rubik-Medium.ttf</file>
         <file>fonts/Rubik-Regular.ttf</file>
+        <file>images/icons/file.svg</file>
+        <file>images/icons/folder.svg</file>
+        <file>images/icons/pause.svg</file>
+        <file>images/icons/play.svg</file>
+        <file>images/icons/refresh-ccw.svg</file>
+        <file>images/icons/shuffle.svg</file>
+        <file>images/icons/skip-back.svg</file>
+        <file>images/icons/skip-forward.svg</file>
+        <file>images/icons/stop.svg</file>
     </qresource>
 </RCC>
