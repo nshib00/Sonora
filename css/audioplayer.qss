@@ -1,0 +1,115 @@
+QWidget {
+    background-color: #121212;
+    color: #ffffff;
+    font-family: "Rubik", sans-serif;
+    font-size: 14px;
+}
+
+/* Лёгкий шрифт */
+QLabel#lightLabel {
+    font-weight: 100;
+}
+
+/* Обычный шрифт */
+QLabel#regularLabel {
+    font-weight: 400;
+}
+
+/* Жирный шрифт */
+QLabel#boldLabel {
+    font-weight: 700;
+}
+
+
+QPushButton {
+    background-color: #1e1e1e;
+    color: #ffffff;
+    border: 1px solid #2e2e2e;
+    border-radius: 6px;
+    padding: 6px 12px;
+}
+
+QPushButton:hover {
+    background-color: #2a2a2a;
+}
+
+QPushButton:pressed {
+    background-color: #3a3a3a;
+}
+
+QPushButton:disabled {
+    background-color: #1e1e1e;
+    color: #555555;
+    border: 1px solid #2e2e2e;
+}
+
+QSlider::groove:horizontal {
+    height: 6px;
+    background: #2e2e2e;
+    border-radius: 3px;
+}
+
+QSlider::handle:horizontal {
+    background: #ffffff;
+    border: 1px solid #888888;
+    width: 14px;
+    height: 14px;
+    margin: -5px 0;
+    border-radius: 7px;
+}
+
+QSlider::sub-page:horizontal {
+    background: #ffffff;
+    border-radius: 3px;
+}
+
+QSlider::add-page:horizontal {
+    background: #2e2e2e;
+    border-radius: 3px;
+}
+
+QListWidget {
+    background-color: #1a1a1a;
+    color: #ffffff;
+    border: 1px solid #2e2e2e;
+    border-radius: 6px;
+}
+
+QListWidget::item {
+    padding: 6px 8px;
+}
+
+QListWidget::item:selected {
+    background-color: #333333;
+    border-left: 4px solid #ffffff;
+}
+
+QLabel {
+    color: #ffffff;
+}
+
+QLabel#trackTitleLabel {
+    font-weight: bold;
+    font-size: 16px;
+}
+
+QLabel#albumTitleLabel {
+    font-size: 13px;
+    color: #cccccc;
+}
+
+QLabel#timeLabel {
+    font-family: monospace;
+}
+
+QPushButton#shuffleButton, QPushButton#repeatButton {
+    min-width: 60px;
+}
+
+QPushButton#shuffleButton {
+    color: #ffffff;
+}
+
+QPushButton#shuffleButton:checked {
+    background-color: #333333;
+}

@@ -1,0 +1,9 @@
+<RCC>
+    <qresource prefix="/">
+        <file>images/placeholder.png</file>
+        <file>css/audioplayer.qss</file>
+        <file>fonts/Rubik-Light.ttf</file>
+        <file>fonts/Rubik-Medium.ttf</file>
+        <file>fonts/Rubik-Regular.ttf</file>
+    </qresource>
+</RCC>
