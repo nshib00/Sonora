@@ -1,4 +1,5 @@
 #include "audioplayer.h"
+#include "trackmanager.h"
 
 #include <QPushButton>
 #include <QVBoxLayout>
@@ -12,10 +13,10 @@
 #include <QStyle>
 #include <QDragEnterEvent>
 #include <QMimeData>
-#include <QRandomGenerator>
-
+#include <QDir>
+#include <QFileInfo>
+#include <QTextStream>
 #include <QDebug>
-
 
 AudioPlayer::AudioPlayer(QWidget *parent)
     : QWidget(parent)
@@ -24,22 +25,13 @@ AudioPlayer::AudioPlayer(QWidget *parent)
     setupConnections();
 }
 
-void AudioPlayer::openFile()
-{
-    QString fileName = QFileDialog::getOpenFileName(this, "Открыть аудио", "", "Audio Files (*.mp3 *.wav)");
-    if (!fileName.isEmpty()) {
-        player->setMedia(QUrl::fromLocalFile(fileName));
-        player->play();
-    }
-}
-
-
 void AudioPlayer::setupUi()
 {
     setWindowTitle("Sonora");
     setAcceptDrops(true);
 
     player = new QMediaPlayer(this);
+    trackManager = new TrackManager(this);
 
     openButton = new QPushButton;
     openButton->setIcon(style()->standardIcon(QStyle::SP_DirOpenIcon));
@@ -77,11 +69,11 @@ void AudioPlayer::setupUi()
     coverArtLabel->setPixmap(QPixmap());
 
     trackListWidget = new QListWidget;
-    trackListWidget->setMinimumWidth(200);
-    trackListWidget->setMaximumWidth(400);
+    trackListWidget->setMaximumSize(200, 400);
 
     prevButton = new QPushButton;
     prevButton->setIcon(style()->standardIcon(QStyle::SP_MediaSkipBackward));
+
     nextButton = new QPushButton;
     nextButton->setIcon(style()->standardIcon(QStyle::SP_MediaSkipForward));
 
@@ -128,7 +120,6 @@ void AudioPlayer::setupUi()
     applyStyles();
 }
 
-
 void AudioPlayer::setupConnections()
 {
     connect(openButton, &QPushButton::clicked, this, &AudioPlayer::openFile);
@@ -141,21 +132,63 @@ void AudioPlayer::setupConnections()
     connect(player, &QMediaPlayer::durationChanged, this, &AudioPlayer::updateDuration);
     connect(progressSlider, &QSlider::sliderMoved, this, &AudioPlayer::setPosition);
     connect(player, &QMediaPlayer::metaDataAvailableChanged, this, &AudioPlayer::updateMetaData);
-    connect(trackListWidget, &QListWidget::itemDoubleClicked, this, [this](QListWidgetItem *item) {
-            int index = trackListWidget->row(item);
-            playTrack(index);
-    });
-    connect(player, &QMediaPlayer::mediaStatusChanged, this, [this](QMediaPlayer::MediaStatus status) {
-        if (status == QMediaPlayer::EndOfMedia) {
-            playNext();
+
+    // Навигация треков напрямую
+    connect(prevButton, &QPushButton::clicked, trackManager, &TrackManager::playPrevious);
+    connect(nextButton, &QPushButton::clicked, trackManager, &TrackManager::playNext);
+
+    // Повтор — toggle + обновляем надпись кнопки
+    connect(repeatButton, &QPushButton::clicked, this, [this]() {
+        trackManager->toggleRepeat();
+        switch (trackManager->repeatMode()) {
+        case TrackManager::NoRepeat: repeatButton->setText(" выкл"); break;
+        case TrackManager::RepeatAll: repeatButton->setText(" все"); break;
+        case TrackManager::RepeatOne: repeatButton->setText(" трек"); break;
         }
     });
-    connect(prevButton, &QPushButton::clicked, this, &AudioPlayer::playPrevious);
-    connect(nextButton, &QPushButton::clicked, this, &AudioPlayer::playNext);
-    connect(repeatButton, &QPushButton::clicked, this, &AudioPlayer::toggleRepeatMode);
-    connect(shuffleButton, &QPushButton::clicked, this, &AudioPlayer::toggleShuffleMode);
+
+    // Перемешивание
+    connect(shuffleButton, &QPushButton::clicked, this, [this]() {
+        trackManager->toggleShuffle();
+        shuffleButton->setText(trackManager->shuffleEnabled() ? "🔀 вкл" : "🔀 выкл");
+    });
+
+    // Обновление плейлиста
+    connect(trackManager, &TrackManager::playlistUpdated, this, [this](const QStringList &files) {
+        trackListWidget->clear();
+        for (const QString &filePath : files) {
+            QFileInfo fi(filePath);
+            trackListWidget->addItem(fi.fileName());
+        }
+    });
+
+    // Обновление активного трека
+    connect(trackManager, &TrackManager::trackChanged, this, [this](const QString &filePath, int index) {
+        player->setMedia(QUrl::fromLocalFile(filePath));
+        player->play();
+        trackListWidget->setCurrentRow(index);
+    });
+
+    connect(trackListWidget, &QListWidget::itemDoubleClicked, this, [this](QListWidgetItem *item) {
+        int index = trackListWidget->row(item);
+        trackManager->playTrack(index);
+    });
+
+    connect(player, &QMediaPlayer::mediaStatusChanged, this, [this](QMediaPlayer::MediaStatus status) {
+        if (status == QMediaPlayer::EndOfMedia) {
+            trackManager->playNext();
+        }
+    });
 }
 
+void AudioPlayer::openFile()
+{
+    QString fileName = QFileDialog::getOpenFileName(this, "Открыть аудио", "", "Audio Files (*.mp3 *.wav)");
+    if (!fileName.isEmpty()) {
+        trackManager->setPlaylist({fileName});
+        trackManager->playTrack(0);
+    }
+}
 
 void AudioPlayer::openFolder()
 {
@@ -165,17 +198,60 @@ void AudioPlayer::openFolder()
         QStringList filters = {"*.mp3", "*.wav", "*.flac", "*.ogg", "*.m4a"};
         QFileInfoList fileList = dir.entryInfoList(filters, QDir::Files);
 
-        playlistFiles.clear();
-        trackListWidget->clear();
-
+        QStringList files;
         for (const QFileInfo &fileInfo : fileList) {
-            playlistFiles << fileInfo.absoluteFilePath();
-            trackListWidget->addItem(fileInfo.fileName());
+            files << fileInfo.absoluteFilePath();
         }
 
-        if (!playlistFiles.isEmpty()) {
-            playTrack(0);
+        if (!files.isEmpty()) {
+            trackManager->setPlaylist(files);
+            trackManager->playTrack(0);
         }
+    }
+}
+
+void AudioPlayer::dragEnterEvent(QDragEnterEvent *event)
+{
+    if (event->mimeData()->hasUrls()) {
+        event->acceptProposedAction();
+    }
+}
+
+void AudioPlayer::dropEvent(QDropEvent *event)
+{
+    QList<QUrl> urls = event->mimeData()->urls();
+    if (urls.isEmpty()) return;
+
+    QStringList allowedExtensions = {"mp3", "wav", "flac", "ogg", "m4a"};
+    QStringList newFiles;
+
+    for (const QUrl &url : urls) {
+        QString path = url.toLocalFile();
+        if (path.isEmpty()) continue;
+
+        QFileInfo fileInfo(path);
+
+        if (fileInfo.isDir()) {
+            QDir dir(path);
+            QStringList filters;
+            for (const QString &ext : allowedExtensions) {
+                filters << "*." + ext;
+            }
+            QFileInfoList fileList = dir.entryInfoList(filters, QDir::Files);
+            for (const QFileInfo &audioFile : fileList) {
+                newFiles << audioFile.absoluteFilePath();
+            }
+        } else {
+            QString ext = fileInfo.suffix().toLower();
+            if (allowedExtensions.contains(ext)) {
+                newFiles << fileInfo.absoluteFilePath();
+            }
+        }
+    }
+
+    if (!newFiles.isEmpty()) {
+        trackManager->setPlaylist(newFiles);
+        trackManager->playTrack(0);
     }
 }
 
@@ -219,23 +295,13 @@ void AudioPlayer::updateMetaData()
     QString albumTitle = player->metaData(QMediaMetaData::AlbumTitle).toString();
     QString trackYear = player->metaData(QMediaMetaData::Year).toString();
 
-    if (artist.isEmpty()) {
-        artist = "Неизвестен";
-    }
-    if (title.isEmpty()) {
-        title = "Без названия";
-    }
-    if (albumTitle.isEmpty()) {
-        albumTitle = "Неизвестный альбом";
-    }
-    if (!trackYear.isEmpty()) {
-        albumTitle += " (" + trackYear + ")";
-    }
+    if (artist.isEmpty()) artist = "Неизвестен";
+    if (title.isEmpty()) title = "Без названия";
+    if (albumTitle.isEmpty()) albumTitle = "Неизвестный альбом";
+    if (!trackYear.isEmpty()) albumTitle += " (" + trackYear + ")";
 
     trackTitleLabel->setText(artist + " - " + title);
     albumTitleLabel->setText(albumTitle);
-
-    qDebug() << player->availableMetaData();
 
     QVariant cover = player->metaData(QMediaMetaData::ThumbnailImage);
     QPixmap pixmap;
@@ -249,131 +315,9 @@ void AudioPlayer::updateMetaData()
     coverArtLabel->setPixmap(scaled);
 }
 
-void AudioPlayer::dragEnterEvent(QDragEnterEvent *event)
+void AudioPlayer::applyStyles()
 {
-    if (event->mimeData()->hasUrls()) {
-        event->acceptProposedAction();
-    }
-}
-
-void AudioPlayer::dropEvent(QDropEvent *event)
-{
-    QList<QUrl> urls = event->mimeData()->urls();
-    if (urls.isEmpty()) return;
-
-    QStringList allowedExtensions = {"mp3", "wav", "flac", "ogg", "m4a"};
-    QStringList newFiles;
-
-    for (const QUrl &url : urls) {
-        QString path = url.toLocalFile();
-        if (path.isEmpty()) continue;
-
-        QFileInfo fileInfo(path);
-
-        if (fileInfo.isDir()) {
-            // Если папка — находим все аудиофайлы
-            QDir dir(path);
-            QStringList filters;
-            for (const QString &ext : allowedExtensions) {
-                filters << "*." + ext;
-            }
-            QFileInfoList fileList = dir.entryInfoList(filters, QDir::Files);
-            for (const QFileInfo &audioFile : fileList) {
-                newFiles << audioFile.absoluteFilePath();
-            }
-        } else {
-            // Если файл — проверяем расширение
-            QString ext = fileInfo.suffix().toLower();
-            if (allowedExtensions.contains(ext)) {
-                newFiles << fileInfo.absoluteFilePath();
-            }
-        }
-    }
-    if (!newFiles.isEmpty()) {
-        playlistFiles = newFiles;
-        trackListWidget->clear();
-        for (const QString &filePath : playlistFiles) {
-            QFileInfo fi(filePath);
-            trackListWidget->addItem(fi.fileName());
-        }
-        playTrack(0);
-    }
-}
-
-void AudioPlayer::playTrack(int index)
-{
-    if (index >= 0 && index < playlistFiles.size()) {
-        currentTrackIndex = index;
-        QString filePath = playlistFiles.at(index);
-        player->setMedia(QUrl::fromLocalFile(filePath));
-        player->play();
-
-        // Подсвечиваем текущий трек
-        trackListWidget->setCurrentRow(index);
-    }
-}
-
-void AudioPlayer::playNext()
-{
-    if (playlistFiles.isEmpty()) return;
-
-    if (repeatMode == RepeatOne) {
-        player->setMedia(QUrl::fromLocalFile(playlistFiles[currentTrackIndex]));
-        player->play();
-        return;
-    }
-
-    if (shuffleMode) {
-        int nextIndex = QRandomGenerator::global()->bounded(playlistFiles.size());
-        currentTrackIndex = nextIndex;
-    } else {
-        currentTrackIndex++;
-        if (currentTrackIndex >= playlistFiles.size()) {
-            if (repeatMode == RepeatAll)
-                currentTrackIndex = 0;
-            else
-                return; // стоп, если NoRepeat
-        }
-    }
-
-    player->setMedia(QUrl::fromLocalFile(playlistFiles[currentTrackIndex]));
-    player->play();
-    trackListWidget->setCurrentRow(currentTrackIndex);
-}
-
-void AudioPlayer::playPrevious()
-{
-    if (playlistFiles.isEmpty()) return;
-    int prevIndex = (currentTrackIndex - 1 + playlistFiles.size()) % playlistFiles.size();
-    playTrack(prevIndex);
-}
-
-void AudioPlayer::toggleRepeatMode()
-{
-    repeatMode = static_cast<RepeatMode>((repeatMode + 1) % 3);
-
-    switch (repeatMode) {
-    case NoRepeat:
-        repeatButton->setText(" выкл");
-        break;
-    case RepeatAll:
-        repeatButton->setText(" все");
-        break;
-    case RepeatOne:
-        repeatButton->setText(" трек");
-        break;
-    }
-}
-
-void AudioPlayer::toggleShuffleMode()
-{
-    shuffleMode = !shuffleMode;
-    shuffleButton->setText(shuffleMode ? "🔀 вкл" : "🔀 выкл");
-}
-
-void AudioPlayer::applyStyles() {
     QFile file(":/css/audioplayer.qss");
-
     if (file.open(QFile::ReadOnly | QFile::Text)) {
         QTextStream stream(&file);
         QString styleSheet = stream.readAll();

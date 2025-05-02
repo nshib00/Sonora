@@ -18,11 +18,13 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
     audioplayer.cpp \
     main.cpp \
-    mainwindow.cpp
+    mainwindow.cpp \
+    trackmanager.cpp
 
 HEADERS += \
     audioplayer.h \
-    mainwindow.h
+    mainwindow.h \
+    trackmanager.h
 
 FORMS += \
     mainwindow.ui

@@ -10,6 +10,8 @@
 #include <QFile>
 #include <QTextStream>
 
+#include "trackmanager.h"
+
 class QPushButton;
 class QSlider;
 class QLabel;
@@ -40,6 +42,7 @@ private:
     void setupConnections();
 
     QMediaPlayer *player;
+    TrackManager *trackManager;
 
     QPushButton *openButton;
     QPushButton *openFolderButton;
@@ -61,12 +64,6 @@ private:
     int currentTrackIndex = -1;
 
     void playTrack(int index);
-    void playNext();
-    void playPrevious();
-
-    void toggleRepeatMode();
-    void toggleShuffleMode();
-
 
     QSlider *progressSlider;
     QSlider *volumeSlider;
