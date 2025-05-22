@@ -13,6 +13,8 @@ PlaylistWidget::PlaylistWidget(DBManager *db, QWidget *parent)
     addButton = new QPushButton("Добавить плейлист", this);
 
     layout = new QVBoxLayout(this);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
     layout->addWidget(addButton);
     layout->addWidget(listWidget);
 
@@ -66,9 +68,7 @@ void PlaylistWidget::onAddTrackToPlaylist()
 
         // Добавляем трек в плейлист с порядковым номером
         dbManager->addTrackToPlaylist(playlistId, filePath, order);
-
-        // Обновляем плейлист в интерфейсе
-        loadTracksForPlaylist(playlistId);
+        emit trackAddedToPlaylist(playlistId);
     }
 }
 
@@ -83,6 +83,7 @@ void PlaylistWidget::onItemContextMenu(const QPoint &pos)
     QAction *renameAction = menu.addAction("Переименовать");
     QAction *deleteAction = menu.addAction("Удалить");
     QAction *addTrackAction = menu.addAction("Добавить трек");
+    QAction *addFolderAction = menu.addAction("Добавить папку");
 
     QAction *selectedAction = menu.exec(listWidget->mapToGlobal(pos));
     if (selectedAction == renameAction) {
@@ -94,6 +95,9 @@ void PlaylistWidget::onItemContextMenu(const QPoint &pos)
     } else if (selectedAction == addTrackAction) {
         listWidget->setCurrentItem(item);
         onAddTrackToPlaylist();
+    } else if (selectedAction == addFolderAction) {
+        listWidget->setCurrentItem(item);
+        onAddFolderToPlaylist();
     }
 }
 
@@ -146,4 +150,33 @@ void PlaylistWidget::loadTracksForPlaylist(int playlistId)
         listWidget->addItem(fileInfo.fileName());
     }
 }
+
+void PlaylistWidget::onAddFolderToPlaylist()
+{
+    QListWidgetItem *item = listWidget->currentItem();
+    if (!item || !itemToIdMap.contains(item)) return;
+
+    int playlistId = itemToIdMap.value(item);
+    QString folderPath = QFileDialog::getExistingDirectory(this, "Выберите папку с треками");
+
+    if (!folderPath.isEmpty()) {
+        QDir dir(folderPath);
+        QStringList filters = {"*.mp3", "*.wav", "*.flac", "*.ogg", "*.m4a"};
+        QFileInfoList fileList = dir.entryInfoList(filters, QDir::Files);
+
+        if (fileList.isEmpty()) {
+            QMessageBox::information(this, "Нет треков", "В выбранной папке не найдено аудиофайлов.");
+            return;
+        }
+
+        int order = dbManager->getTrackCountInPlaylist(playlistId) + 1;
+
+        for (const QFileInfo &fileInfo : fileList) {
+            dbManager->addTrackToPlaylist(playlistId, fileInfo.absoluteFilePath(), order++);
+        }
+
+        emit trackAddedToPlaylist(playlistId);
+    }
+}
+
 

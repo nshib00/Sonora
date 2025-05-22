@@ -17,6 +17,7 @@ public:
 
 signals:
     void playlistSelected(int id, const QString &name);
+    void trackAddedToPlaylist(int playlistId);
 
 private slots:
     void onAddPlaylist();
@@ -36,6 +37,7 @@ private:
     void loadPlaylistsFromDB();
     void loadTracksForPlaylist(int playlistId);
     void onAddTrackToPlaylist();
+    void onAddFolderToPlaylist();
 };
 
 #endif // PLAYLISTWIDGET_H

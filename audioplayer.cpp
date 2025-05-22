@@ -242,6 +242,18 @@ void AudioPlayer::setupConnections()
             trackManager->playTrack(0);
         }
     });
+
+    connect(playlistWidget, &PlaylistWidget::trackAddedToPlaylist, this, [this](int playlistId) {
+        QStringList tracks = dbManager->loadPlaylistTracks(playlistId);
+        if (!tracks.isEmpty()) {
+            trackManager->setPlaylist(tracks);
+            trackListWidget->clear();
+            for (const QString &filePath : tracks) {
+                QFileInfo fi(filePath);
+                trackListWidget->addItem(fi.fileName());
+            }
+        }
+    });
 }
 
 void AudioPlayer::openFile()
