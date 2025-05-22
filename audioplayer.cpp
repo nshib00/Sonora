@@ -180,7 +180,7 @@ void AudioPlayer::setupConnections()
     // Перемешивание
     connect(shuffleButton, &QPushButton::clicked, this, [this]() {
         trackManager->toggleShuffle();
-        shuffleButton->setText(trackManager->shuffleEnabled() ? "🔀 вкл" : "🔀 выкл");
+        shuffleButton->setText(trackManager->shuffleEnabled() ? "вкл" : "выкл");
     });
 
     // Обновление плейлиста

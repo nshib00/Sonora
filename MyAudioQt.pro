@@ -1,4 +1,4 @@
-QT       += core gui multimedia svg
+QT       += core gui multimedia svg sql
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -17,12 +17,14 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
     audioplayer.cpp \
+    dbmanager.cpp \
     main.cpp \
     mainwindow.cpp \
     trackmanager.cpp
 
 HEADERS += \
     audioplayer.h \
+    dbmanager.h \
     mainwindow.h \
     trackmanager.h
 
