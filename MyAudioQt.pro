@@ -20,12 +20,14 @@ SOURCES += \
     dbmanager.cpp \
     main.cpp \
     mainwindow.cpp \
+    playlistmodel.cpp \
     trackmanager.cpp
 
 HEADERS += \
     audioplayer.h \
     dbmanager.h \
     mainwindow.h \
+    playlistmodel.h \
     trackmanager.h
 
 FORMS += \
