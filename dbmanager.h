@@ -23,6 +23,7 @@ public:
     void addTrackToPlaylist(int playlistId, const QString &trackPath, int order);
     void clearPlaylistTracks(int playlistId);
     QStringList loadPlaylistTracks(int playlistId);
+    int getTrackCountInPlaylist(int playlistId);
 
 private:
     QSqlDatabase db;

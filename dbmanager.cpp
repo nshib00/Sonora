@@ -90,7 +90,10 @@ void DBManager::addTrackToPlaylist(int playlistId, const QString &trackPath, int
     query.bindValue(":pid", playlistId);
     query.bindValue(":path", trackPath);
     query.bindValue(":order", order);
-    query.exec();
+
+    if (!query.exec()) {
+        qWarning() << "Не удалось добавить трек в плейлист:" << query.lastError();
+    }
 }
 
 void DBManager::clearPlaylistTracks(int playlistId)
@@ -113,4 +116,18 @@ QStringList DBManager::loadPlaylistTracks(int playlistId)
         tracks << query.value(0).toString();
     }
     return tracks;
+}
+
+int DBManager::getTrackCountInPlaylist(int playlistId)
+{
+    QSqlQuery query;
+    query.prepare("SELECT COUNT(*) FROM playlist_tracks WHERE playlist_id = ?");
+    query.addBindValue(playlistId);
+
+    if (query.exec() && query.next()) {
+        return query.value(0).toInt();
+    }
+
+    qWarning() << "Ошибка при получении количества треков в плейлисте:" << query.lastError();
+    return 0;
 }

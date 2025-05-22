@@ -6,7 +6,7 @@ int main(int argc, char *argv[]) {
     app.setWindowIcon(QIcon(":/images/icons/logo.ico"));
 
     AudioPlayer player;
-    player.resize(1000, 500);
+    player.resize(1400, 700);
     player.show();
 
     return app.exec();

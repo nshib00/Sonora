@@ -1,4 +1,4 @@
-#include "audioplayer.h"
+﻿#include "audioplayer.h"
 #include "trackmanager.h"
 
 #include <QPushButton>
@@ -24,6 +24,10 @@ AudioPlayer::AudioPlayer(QWidget *parent) : QWidget(parent)
 {
     setWindowTitle("Sonora");
     setAcceptDrops(true);
+
+    dbManager = new DBManager(this);
+    dbManager->init("audioplayer.db");
+
     setupUi();
     setupConnections();
 }
@@ -59,11 +63,8 @@ void AudioPlayer::setupUi()
     openFolderButton = new QPushButton;
     openFolderButton->setIcon(loadColoredIcon(":/images/icons/folder.svg", Qt::white));
 
-    playButton = new QPushButton;
-    playButton->setIcon(loadColoredIcon(":/images/icons/play.svg", Qt::white));
-
-    pauseButton = new QPushButton;
-    pauseButton->setIcon(loadColoredIcon(":/images/icons/pause.svg", Qt::white));
+    playPauseButton = new QPushButton;
+    playPauseButton->setIcon(loadColoredIcon(":/images/icons/play.svg", Qt::white));
 
     stopButton = new QPushButton;
     stopButton->setIcon(loadColoredIcon(":/images/icons/stop.svg", Qt::white));
@@ -86,7 +87,8 @@ void AudioPlayer::setupUi()
     albumTitleLabel->setAlignment(Qt::AlignCenter);
 
     coverArtLabel = new QLabel;
-    coverArtLabel->setFixedSize(250, 250);
+    coverArtLabel->setMinimumSize(300, 300);
+    coverArtLabel->setMaximumSize(600, 600);
     coverArtLabel->setAlignment(Qt::AlignCenter);
     coverArtLabel->setPixmap(QPixmap());
 
@@ -127,24 +129,33 @@ void AudioPlayer::setupUi()
 
     auto *navLayout = new QHBoxLayout;
     navLayout->addWidget(prevButton);
-    navLayout->addWidget(playButton);
-    navLayout->addWidget(pauseButton);
+    navLayout->addWidget(playPauseButton);
     navLayout->addWidget(stopButton);
     navLayout->addWidget(nextButton);
 
-    auto *leftLayout = new QVBoxLayout;
-    leftLayout->addLayout(openAudioLayout);
-    leftLayout->addWidget(coverArtLabel, 1, Qt::AlignCenter);
-    leftLayout->addWidget(trackTitleLabel);
-    leftLayout->addWidget(albumTitleLabel);
-    leftLayout->addLayout(buttonsLayout);
-    leftLayout->addLayout(timeLayout);
-    leftLayout->addLayout(navLayout);
-    leftLayout->addLayout(volumeLayout);
+    auto *audioPlayerLayout = new QVBoxLayout;
+    audioPlayerLayout->addLayout(openAudioLayout);
+    audioPlayerLayout->addWidget(coverArtLabel, 1, Qt::AlignCenter);
+    audioPlayerLayout->addWidget(trackTitleLabel);
+    audioPlayerLayout->addWidget(albumTitleLabel);
+    audioPlayerLayout->addLayout(buttonsLayout);
+    audioPlayerLayout->addLayout(timeLayout);
+    audioPlayerLayout->addLayout(navLayout);
+    audioPlayerLayout->addLayout(volumeLayout);
+    audioPlayerLayout->setMargin(15);
+
+    playlistWidget = new PlaylistWidget(dbManager, this);
+    playlistWidget->setMinimumWidth(200);
+    playlistWidget->setMaximumWidth(250);
 
     auto *mainLayout = new QHBoxLayout(this);
-    mainLayout->addLayout(leftLayout);
+
+    mainLayout->addWidget(playlistWidget);
+    mainLayout->addLayout(audioPlayerLayout);
     mainLayout->addWidget(trackListWidget);
+
+    mainLayout->setSpacing(20);
+    mainLayout->setContentsMargins(0, 0, 0, 0);
 
     applyStyles();
 }
@@ -154,14 +165,28 @@ void AudioPlayer::setupConnections()
 {
     connect(openButton, &QPushButton::clicked, this, &AudioPlayer::openFile);
     connect(openFolderButton, &QPushButton::clicked, this, &AudioPlayer::openFolder);
-    connect(playButton, &QPushButton::clicked, player, &QMediaPlayer::play);
-    connect(pauseButton, &QPushButton::clicked, player, &QMediaPlayer::pause);
     connect(stopButton, &QPushButton::clicked, player, &QMediaPlayer::stop);
     connect(volumeSlider, &QSlider::valueChanged, player, &QMediaPlayer::setVolume);
     connect(player, &QMediaPlayer::positionChanged, this, &AudioPlayer::updatePosition);
     connect(player, &QMediaPlayer::durationChanged, this, &AudioPlayer::updateDuration);
     connect(progressSlider, &QSlider::sliderMoved, this, &AudioPlayer::setPosition);
     connect(player, &QMediaPlayer::metaDataAvailableChanged, this, &AudioPlayer::updateMetaData);
+
+    connect(playPauseButton, &QPushButton::clicked, this, [this]() {
+        if (player->state() == QMediaPlayer::PlayingState) {
+            player->pause();
+        } else {
+            player->play();
+        }
+    });
+
+    connect(player, &QMediaPlayer::stateChanged, this, [this](QMediaPlayer::State state) {
+        if (state == QMediaPlayer::PlayingState) {
+            playPauseButton->setIcon(loadColoredIcon(":/images/icons/pause.svg", Qt::white));
+        } else {
+            playPauseButton->setIcon(loadColoredIcon(":/images/icons/play.svg", Qt::white));
+        }
+    });
 
     // Навигация треков напрямую
     connect(prevButton, &QPushButton::clicked, trackManager, &TrackManager::playPrevious);
@@ -207,6 +232,14 @@ void AudioPlayer::setupConnections()
     connect(player, &QMediaPlayer::mediaStatusChanged, this, [this](QMediaPlayer::MediaStatus status) {
         if (status == QMediaPlayer::EndOfMedia) {
             trackManager->playNext();
+        }
+    });
+
+    connect(playlistWidget, &PlaylistWidget::playlistSelected, this, [this](int playlistId) {
+        QStringList tracks = dbManager->loadPlaylistTracks(playlistId);
+        if (!tracks.isEmpty()) {
+            trackManager->setPlaylist(tracks);
+            trackManager->playTrack(0);
         }
     });
 }

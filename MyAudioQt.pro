@@ -21,6 +21,7 @@ SOURCES += \
     main.cpp \
     mainwindow.cpp \
     playlistmodel.cpp \
+    playlistwidget.cpp \
     trackmanager.cpp
 
 HEADERS += \
@@ -28,6 +29,7 @@ HEADERS += \
     dbmanager.h \
     mainwindow.h \
     playlistmodel.h \
+    playlistwidget.h \
     trackmanager.h
 
 FORMS += \

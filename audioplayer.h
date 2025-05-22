@@ -11,6 +11,8 @@
 #include <QTextStream>
 
 #include "trackmanager.h"
+#include "dbmanager.h"
+#include "playlistwidget.h"
 
 class QPushButton;
 class QSlider;
@@ -44,11 +46,14 @@ private:
     QMediaPlayer *player;
     TrackManager *trackManager;
 
+    DBManager *dbManager;
+
     QPushButton *openButton;
     QPushButton *openFolderButton;
-    QPushButton *playButton;
-    QPushButton *pauseButton;
+    QPushButton *playPauseButton;
     QPushButton *stopButton;
+
+    PlaylistWidget *playlistWidget;
 
     QListWidget *trackListWidget;
     QPushButton *prevButton;
