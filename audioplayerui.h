@@ -38,7 +38,6 @@ public:
     QListWidget *trackListWidget;
     PlaylistWidget *playlistWidget;
 
-    void applyStyles();
     QIcon loadColoredIcon(const QString &resourcePath, const QColor &color);
 private:
     void setupUi(DBManager* dbManager);

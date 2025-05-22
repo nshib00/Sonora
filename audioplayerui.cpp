@@ -20,7 +20,6 @@ AudioPlayerUI::AudioPlayerUI(DBManager* dbManager, QWidget *parent)
     : QWidget(parent)
 {
     setupUi(dbManager);
-    applyStyles();
 }
 
 void AudioPlayerUI::setupUi(DBManager* dbManager)
@@ -124,17 +123,6 @@ void AudioPlayerUI::setupUi(DBManager* dbManager)
 
     mainLayout->setSpacing(20);
     mainLayout->setContentsMargins(0, 0, 0, 0);
-}
-
-void AudioPlayerUI::applyStyles()
-{
-    QFile file(":/css/audioplayer.qss");
-    if (file.open(QFile::ReadOnly | QFile::Text)) {
-        QTextStream stream(&file);
-        this->setStyleSheet(stream.readAll());
-    } else {
-        qDebug() << "Не удалось загрузить стили.";
-    }
 }
 
 QIcon AudioPlayerUI::loadColoredIcon(const QString &resourcePath, const QColor &color)
