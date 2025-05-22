@@ -19,160 +19,50 @@
 #include <QDebug>
 #include <QtSvg/QSvgRenderer>
 #include <QPainter>
+#include <QMenu>
+#include <QListWidget>
 
-AudioPlayer::AudioPlayer(QWidget *parent) : QWidget(parent)
+#include "audioplayerui.h"
+#include "dbmanager.h"
+#include "playlistwidget.h"
+
+AudioPlayer::AudioPlayer(QWidget *parent)
+    : QWidget(parent)
 {
-    setWindowTitle("Sonora");
     setAcceptDrops(true);
+    setWindowTitle("Sonora");
 
     dbManager = new DBManager(this);
     dbManager->init("audioplayer.db");
 
-    setupUi();
-    setupConnections();
-}
-
-QIcon loadColoredIcon(const QString &resourcePath, const QColor &color)
-{
-    QSvgRenderer renderer(resourcePath);
-
-    QSize svgSize = renderer.defaultSize();
-    if (!svgSize.isValid()) svgSize = QSize(64, 64);
-
-    QPixmap pixmap(svgSize);
-    pixmap.fill(Qt::transparent);
-
-    QPainter painter(&pixmap);
-    painter.setRenderHint(QPainter::Antialiasing);
-    renderer.render(&painter);
-    painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
-    painter.fillRect(pixmap.rect(), color);
-    painter.end();
-
-    return QIcon(pixmap);
-}
-
-void AudioPlayer::setupUi()
-{
     player = new QMediaPlayer(this);
     trackManager = new TrackManager(this);
 
-    openButton = new QPushButton;
-    openButton->setIcon(loadColoredIcon(":/images/icons/file.svg", Qt::white));
+    ui = new AudioPlayerUI(dbManager, this);
+    QHBoxLayout *layout = new QHBoxLayout(this);
+    layout->addWidget(ui);
+    setLayout(layout);
 
-    openFolderButton = new QPushButton;
-    openFolderButton->setIcon(loadColoredIcon(":/images/icons/folder.svg", Qt::white));
+    player->setVolume(ui->volumeSlider->value());
 
-    playPauseButton = new QPushButton;
-    playPauseButton->setIcon(loadColoredIcon(":/images/icons/play.svg", Qt::white));
-
-    stopButton = new QPushButton;
-    stopButton->setIcon(loadColoredIcon(":/images/icons/stop.svg", Qt::white));
-
-    progressSlider = new QSlider(Qt::Horizontal);
-    progressSlider->setRange(0, 0);
-
-    volumeSlider = new QSlider(Qt::Horizontal);
-    volumeSlider->setRange(0, 100);
-    volumeSlider->setValue(50);
-    player->setVolume(50);
-
-    leftTimeLabel = new QLabel("00:00");
-    rightTimeLabel = new QLabel("00:00");
-
-    trackTitleLabel = new QLabel("Трек не выбран");
-    trackTitleLabel->setAlignment(Qt::AlignCenter);
-
-    albumTitleLabel = new QLabel("");
-    albumTitleLabel->setAlignment(Qt::AlignCenter);
-
-    coverArtLabel = new QLabel;
-    coverArtLabel->setMinimumSize(300, 300);
-    coverArtLabel->setMaximumSize(600, 600);
-    coverArtLabel->setAlignment(Qt::AlignCenter);
-    coverArtLabel->setPixmap(QPixmap());
-
-    trackListWidget = new QListWidget;
-    trackListWidget->setMinimumWidth(200);
-    trackListWidget->setMaximumWidth(400);
-
-    prevButton = new QPushButton;
-    prevButton->setIcon(loadColoredIcon(":/images/icons/skip-back.svg", Qt::white));
-
-    nextButton = new QPushButton;
-    nextButton->setIcon(loadColoredIcon(":/images/icons/skip-forward.svg", Qt::white));
-
-    repeatButton = new QPushButton;
-    repeatButton->setIcon(loadColoredIcon(":/images/icons/refresh-ccw.svg", Qt::white));
-
-    shuffleButton = new QPushButton;
-    shuffleButton->setIcon(loadColoredIcon(":/images/icons/shuffle.svg", Qt::white));
-    shuffleButton->setText(" выкл");
-
-    auto *openAudioLayout = new QHBoxLayout;
-    openAudioLayout->addWidget(openButton);
-    openAudioLayout->addWidget(openFolderButton);
-    openAudioLayout->addStretch();
-
-    auto *buttonsLayout = new QHBoxLayout;
-    buttonsLayout->addWidget(repeatButton);
-    buttonsLayout->addWidget(shuffleButton);
-
-    auto *volumeLayout = new QHBoxLayout;
-    volumeLayout->addWidget(new QLabel("Громкость"));
-    volumeLayout->addWidget(volumeSlider);
-
-    auto *timeLayout = new QHBoxLayout;
-    timeLayout->addWidget(leftTimeLabel);
-    timeLayout->addWidget(progressSlider);
-    timeLayout->addWidget(rightTimeLabel);
-
-    auto *navLayout = new QHBoxLayout;
-    navLayout->addWidget(prevButton);
-    navLayout->addWidget(playPauseButton);
-    navLayout->addWidget(stopButton);
-    navLayout->addWidget(nextButton);
-
-    auto *audioPlayerLayout = new QVBoxLayout;
-    audioPlayerLayout->addLayout(openAudioLayout);
-    audioPlayerLayout->addWidget(coverArtLabel, 1, Qt::AlignCenter);
-    audioPlayerLayout->addWidget(trackTitleLabel);
-    audioPlayerLayout->addWidget(albumTitleLabel);
-    audioPlayerLayout->addLayout(buttonsLayout);
-    audioPlayerLayout->addLayout(timeLayout);
-    audioPlayerLayout->addLayout(navLayout);
-    audioPlayerLayout->addLayout(volumeLayout);
-    audioPlayerLayout->setMargin(15);
-
-    playlistWidget = new PlaylistWidget(dbManager, this);
-    playlistWidget->setMinimumWidth(200);
-    playlistWidget->setMaximumWidth(250);
-
-    auto *mainLayout = new QHBoxLayout(this);
-
-    mainLayout->addWidget(playlistWidget);
-    mainLayout->addLayout(audioPlayerLayout);
-    mainLayout->addWidget(trackListWidget);
-
-    mainLayout->setSpacing(20);
-    mainLayout->setContentsMargins(0, 0, 0, 0);
-
-    applyStyles();
+    setupConnections();
 }
-
 
 void AudioPlayer::setupConnections()
 {
-    connect(openButton, &QPushButton::clicked, this, &AudioPlayer::openFile);
-    connect(openFolderButton, &QPushButton::clicked, this, &AudioPlayer::openFolder);
-    connect(stopButton, &QPushButton::clicked, player, &QMediaPlayer::stop);
-    connect(volumeSlider, &QSlider::valueChanged, player, &QMediaPlayer::setVolume);
+    connect(ui->openButton, &QPushButton::clicked, this, &AudioPlayer::openFile);
+    connect(ui->openFolderButton, &QPushButton::clicked, this, &AudioPlayer::openFolder);
+    connect(ui->stopButton, &QPushButton::clicked, player, &QMediaPlayer::stop);
+    connect(ui->volumeSlider, &QSlider::valueChanged, player, &QMediaPlayer::setVolume);
     connect(player, &QMediaPlayer::positionChanged, this, &AudioPlayer::updatePosition);
     connect(player, &QMediaPlayer::durationChanged, this, &AudioPlayer::updateDuration);
-    connect(progressSlider, &QSlider::sliderMoved, this, &AudioPlayer::setPosition);
+    connect(ui->progressSlider, &QSlider::sliderMoved, this, &AudioPlayer::setPosition);
     connect(player, &QMediaPlayer::metaDataAvailableChanged, this, &AudioPlayer::updateMetaData);
 
-    connect(playPauseButton, &QPushButton::clicked, this, [this]() {
+    connect(ui->trackListWidget, &QListWidget::customContextMenuRequested, this, &AudioPlayer::showTrackContextMenu);
+
+
+    connect(ui->playPauseButton, &QPushButton::clicked, this, [this]() {
         if (player->state() == QMediaPlayer::PlayingState) {
             player->pause();
         } else {
@@ -182,38 +72,41 @@ void AudioPlayer::setupConnections()
 
     connect(player, &QMediaPlayer::stateChanged, this, [this](QMediaPlayer::State state) {
         if (state == QMediaPlayer::PlayingState) {
-            playPauseButton->setIcon(loadColoredIcon(":/images/icons/pause.svg", Qt::white));
+            ui->playPauseButton->setIcon(ui->loadColoredIcon(":/images/icons/pause.svg", Qt::white));
         } else {
-            playPauseButton->setIcon(loadColoredIcon(":/images/icons/play.svg", Qt::white));
+            ui->playPauseButton->setIcon(ui->loadColoredIcon(":/images/icons/play.svg", Qt::white));
         }
     });
 
     // Навигация треков напрямую
-    connect(prevButton, &QPushButton::clicked, trackManager, &TrackManager::playPrevious);
-    connect(nextButton, &QPushButton::clicked, trackManager, &TrackManager::playNext);
+    connect(ui->prevButton, &QPushButton::clicked, trackManager, &TrackManager::playPrevious);
+    connect(ui->nextButton, &QPushButton::clicked, trackManager, &TrackManager::playNext);
 
     // Повтор — toggle + обновляем надпись кнопки
-    connect(repeatButton, &QPushButton::clicked, this, [this]() {
+    connect(ui->repeatButton, &QPushButton::clicked, this, [this]() {
         trackManager->toggleRepeat();
         switch (trackManager->repeatMode()) {
-        case TrackManager::NoRepeat: repeatButton->setText(" выкл"); break;
-        case TrackManager::RepeatAll: repeatButton->setText(" все"); break;
-        case TrackManager::RepeatOne: repeatButton->setText(" трек"); break;
+        case TrackManager::NoRepeat:
+            ui->repeatButton->setText(" выкл"); break;
+        case TrackManager::RepeatAll:
+            ui->repeatButton->setText(" все"); break;
+        case TrackManager::RepeatOne:
+            ui->repeatButton->setText(" трек"); break;
         }
     });
 
     // Перемешивание
-    connect(shuffleButton, &QPushButton::clicked, this, [this]() {
+    connect(ui->shuffleButton, &QPushButton::clicked, this, [this]() {
         trackManager->toggleShuffle();
-        shuffleButton->setText(trackManager->shuffleEnabled() ? "вкл" : "выкл");
+        ui->shuffleButton->setText(trackManager->shuffleEnabled() ? "вкл" : "выкл");
     });
 
     // Обновление плейлиста
     connect(trackManager, &TrackManager::playlistUpdated, this, [this](const QStringList &files) {
-        trackListWidget->clear();
+        ui->trackListWidget->clear();
         for (const QString &filePath : files) {
             QFileInfo fi(filePath);
-            trackListWidget->addItem(fi.fileName());
+            ui->trackListWidget->addItem(fi.fileName());
         }
     });
 
@@ -221,11 +114,11 @@ void AudioPlayer::setupConnections()
     connect(trackManager, &TrackManager::trackChanged, this, [this](const QString &filePath, int index) {
         player->setMedia(QUrl::fromLocalFile(filePath));
         player->play();
-        trackListWidget->setCurrentRow(index);
+        ui->trackListWidget->setCurrentRow(index);
     });
 
-    connect(trackListWidget, &QListWidget::itemDoubleClicked, this, [this](QListWidgetItem *item) {
-        int index = trackListWidget->row(item);
+    connect(ui->trackListWidget, &QListWidget::itemDoubleClicked, this, [this](QListWidgetItem *item) {
+        int index = ui->trackListWidget->row(item);
         trackManager->playTrack(index);
     });
 
@@ -235,7 +128,7 @@ void AudioPlayer::setupConnections()
         }
     });
 
-    connect(playlistWidget, &PlaylistWidget::playlistSelected, this, [this](int playlistId) {
+    connect(ui->playlistWidget, &PlaylistWidget::playlistSelected, this, [this](int playlistId) {
         QStringList tracks = dbManager->loadPlaylistTracks(playlistId);
         if (!tracks.isEmpty()) {
             trackManager->setPlaylist(tracks);
@@ -243,14 +136,14 @@ void AudioPlayer::setupConnections()
         }
     });
 
-    connect(playlistWidget, &PlaylistWidget::trackAddedToPlaylist, this, [this](int playlistId) {
+    connect(ui->playlistWidget, &PlaylistWidget::trackAddedToPlaylist, this, [this](int playlistId) {
         QStringList tracks = dbManager->loadPlaylistTracks(playlistId);
         if (!tracks.isEmpty()) {
             trackManager->setPlaylist(tracks);
-            trackListWidget->clear();
+            ui->trackListWidget->clear();
             for (const QString &filePath : tracks) {
                 QFileInfo fi(filePath);
-                trackListWidget->addItem(fi.fileName());
+                ui->trackListWidget->addItem(fi.fileName());
             }
         }
     });
@@ -258,7 +151,7 @@ void AudioPlayer::setupConnections()
 
 void AudioPlayer::openFile()
 {
-    QString fileName = QFileDialog::getOpenFileName(this, "Открыть аудио", "", "Audio Files (*.mp3 *.wav)");
+    QString fileName = QFileDialog::getOpenFileName(this, "Открыть аудио", "", "Audio Files (*.mp3 *.wav *.flac *.ogg *.m4a)");
     if (!fileName.isEmpty()) {
         trackManager->setPlaylist({fileName});
         trackManager->playTrack(0);
@@ -332,8 +225,8 @@ void AudioPlayer::dropEvent(QDropEvent *event)
 
 void AudioPlayer::updatePosition(qint64 position)
 {
-    if (!progressSlider->isSliderDown()) {
-        progressSlider->setValue(static_cast<int>(position));
+    if (!ui->progressSlider->isSliderDown()) {
+        ui->progressSlider->setValue(static_cast<int>(position));
     }
     updateTimeLabels();
 }
@@ -341,7 +234,7 @@ void AudioPlayer::updatePosition(qint64 position)
 void AudioPlayer::updateDuration(qint64 dur)
 {
     duration = dur;
-    progressSlider->setRange(0, static_cast<int>(duration));
+    ui->progressSlider->setRange(0, static_cast<int>(duration));
     updateTimeLabels();
 }
 
@@ -360,15 +253,13 @@ void AudioPlayer::updateTimeLabels()
                     (duration / 1000) % 60);
 
     QString format = (duration > 3600000) ? "hh:mm:ss" : "mm:ss";
-    leftTimeLabel->setText(currentTime.toString(format));
-    rightTimeLabel->setText(totalTime.toString(format));
+    ui->leftTimeLabel->setText(currentTime.toString(format));
+    ui->rightTimeLabel->setText(totalTime.toString(format));
 }
 
 void AudioPlayer::updateMetaData()
 {
-    qDebug() << player->availableMetaData();
-
-    QString artist = player->metaData(QMediaMetaData::Author).toString();
+      QString artist = player->metaData(QMediaMetaData::Author).toString();
     QString title = player->metaData(QMediaMetaData::Title).toString();
     QString albumTitle = player->metaData(QMediaMetaData::AlbumTitle).toString();
     QString trackYear = player->metaData(QMediaMetaData::Year).toString();
@@ -402,8 +293,8 @@ void AudioPlayer::updateMetaData()
     if (!trackYear.isEmpty() && trackYear != 0)
         albumTitle += " (" + trackYear + ")";
 
-    trackTitleLabel->setText(artist + " - " + title);
-    albumTitleLabel->setText(albumTitle);
+    ui->trackTitleLabel->setText(artist + " - " + title);
+    ui->albumTitleLabel->setText(albumTitle);
 
     QVariant cover = player->metaData(QMediaMetaData::ThumbnailImage);
     QPixmap pixmap;
@@ -413,19 +304,49 @@ void AudioPlayer::updateMetaData()
         pixmap.load(":/images/placeholder.png");
     }
 
-    QPixmap scaled = pixmap.scaled(coverArtLabel->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
-    coverArtLabel->setPixmap(scaled);
+    QPixmap scaled = pixmap.scaled(ui->coverArtLabel->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    ui->coverArtLabel->setPixmap(scaled);
 }
 
 
-void AudioPlayer::applyStyles()
+void AudioPlayer::displayPlaylistTracks(const QStringList &tracks, int playlistId)
 {
-    QFile file(":/css/audioplayer.qss");
-    if (file.open(QFile::ReadOnly | QFile::Text)) {
-        QTextStream stream(&file);
-        QString styleSheet = stream.readAll();
-        this->setStyleSheet(styleSheet);
-    } else {
-        qDebug() << "Ошибка при открытии файла стилей!";
+    ui->trackListWidget->clear();
+
+    for (const QString &filePath : tracks) {
+        QFileInfo fi(filePath);
+        QListWidgetItem *item = new QListWidgetItem(fi.fileName());
+        item->setData(Qt::UserRole, filePath);           // путь к файлу
+        item->setData(Qt::UserRole + 1, playlistId);     // ID плейлиста
+        ui->trackListWidget->addItem(item);
+    }
+
+    // Устанавливаем текущий плейлист
+    trackManager->setPlaylist(tracks);
+    trackManager->playTrack(0);
+}
+
+void AudioPlayer::showTrackContextMenu(const QPoint &pos)
+{
+    QListWidgetItem *item = ui->trackListWidget->itemAt(pos);
+    if (!item) return;
+
+    QString filePath = item->data(Qt::UserRole).toString();
+    int playlistId = item->data(Qt::UserRole + 1).toInt();
+
+    // Контекстное меню
+    QMenu menu;
+    QAction *removeAction = menu.addAction("Удалить из плейлиста");
+
+    QAction *selectedAction = menu.exec(ui->trackListWidget->viewport()->mapToGlobal(pos));
+    if (selectedAction == removeAction) {
+        if (playlistId > 0) {
+            dbManager->removeTrackFromPlaylist(playlistId, filePath);
+
+            // Обновляем треклист
+            QStringList updatedTracks = dbManager->loadPlaylistTracks(playlistId);
+            displayPlaylistTracks(updatedTracks, playlistId);
+        }
     }
 }
+

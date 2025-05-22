@@ -17,19 +17,21 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
     audioplayer.cpp \
+    audioplayerui.cpp \
     dbmanager.cpp \
     main.cpp \
     mainwindow.cpp \
-    playlistmodel.cpp \
     playlistwidget.cpp \
+    tracklistmodel.cpp \
     trackmanager.cpp
 
 HEADERS += \
     audioplayer.h \
+    audioplayerui.h \
     dbmanager.h \
     mainwindow.h \
-    playlistmodel.h \
     playlistwidget.h \
+    tracklistmodel.h \
     trackmanager.h
 
 FORMS += \

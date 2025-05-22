@@ -1,22 +1,6 @@
-#ifndef AUDIOPLAYER_H
-#define AUDIOPLAYER_H
-
-#include <QWidget>
-#include <QMediaPlayer>
-#include <QFileDialog>
-#include <QDir>
-#include <QFileInfoList>
-#include <QListWidget>
-#include <QFile>
-#include <QTextStream>
-
 #include "trackmanager.h"
-#include "dbmanager.h"
-#include "playlistwidget.h"
-
-class QPushButton;
-class QSlider;
-class QLabel;
+#include <QMediaPlayer>
+#include "audioplayerui.h"
 
 class AudioPlayer : public QWidget
 {
@@ -31,55 +15,28 @@ protected:
 
 private slots:
     void openFile();
+    void openFolder();
     void updatePosition(qint64 position);
     void updateDuration(qint64 duration);
     void setPosition(int position);
     void updateTimeLabels();
     void updateMetaData();
-    void openFolder();
-    void applyStyles();
+    void showTrackContextMenu(const QPoint &pos);
 
 private:
-    void setupUi();
     void setupConnections();
+    void displayPlaylistTracks(const QStringList &tracks, int playlistId);
+    void applyStyles();
 
     QMediaPlayer *player;
     TrackManager *trackManager;
-
     DBManager *dbManager;
 
-    QPushButton *openButton;
-    QPushButton *openFolderButton;
-    QPushButton *playPauseButton;
-    QPushButton *stopButton;
-
-    PlaylistWidget *playlistWidget;
-
-    QListWidget *trackListWidget;
-    QPushButton *prevButton;
-    QPushButton *nextButton;
-
-    QPushButton *repeatButton;
-    QPushButton *shuffleButton;
-    enum RepeatMode { NoRepeat, RepeatAll, RepeatOne };
-    RepeatMode repeatMode = NoRepeat;
-    bool shuffleMode = false;
+    AudioPlayerUI *ui;
 
     QStringList playlistFiles;
     int currentTrackIndex = -1;
+    qint64 duration = 0;
 
     void playTrack(int index);
-
-    QSlider *progressSlider;
-    QSlider *volumeSlider;
-
-    QLabel *leftTimeLabel;
-    QLabel *rightTimeLabel;
-    QLabel *trackTitleLabel;
-    QLabel *albumTitleLabel;
-    QLabel *coverArtLabel;
-
-    qint64 duration = 0;
 };
-
-#endif

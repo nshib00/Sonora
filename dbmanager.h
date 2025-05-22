@@ -24,6 +24,7 @@ public:
     void clearPlaylistTracks(int playlistId);
     QStringList loadPlaylistTracks(int playlistId);
     int getTrackCountInPlaylist(int playlistId);
+    void removeTrackFromPlaylist(int playlistId, const QString &filePath);
 
 private:
     QSqlDatabase db;

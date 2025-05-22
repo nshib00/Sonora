@@ -131,3 +131,18 @@ int DBManager::getTrackCountInPlaylist(int playlistId)
     qWarning() << "Ошибка при получении количества треков в плейлисте:" << query.lastError();
     return 0;
 }
+
+void DBManager::removeTrackFromPlaylist(int playlistId, const QString &filePath)
+{
+    QSqlQuery query;
+    query.prepare("DELETE FROM playlist_tracks WHERE playlist_id = :pid AND track_path = :path");
+    query.bindValue(":pid", playlistId);
+    query.bindValue(":path", filePath);
+
+    if (!query.exec()) {
+        qDebug() << "Ошибка при удалении трека из плейлиста:" << query.lastError().text();
+    } else {
+        qDebug() << "Трек удалён:" << filePath;
+    }
+}
+
