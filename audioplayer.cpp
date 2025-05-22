@@ -373,10 +373,34 @@ void AudioPlayer::updateMetaData()
     QString albumTitle = player->metaData(QMediaMetaData::AlbumTitle).toString();
     QString trackYear = player->metaData(QMediaMetaData::Year).toString();
 
-    if (artist.isEmpty()) artist = "Неизвестен";
-    if (title.isEmpty()) title = "Без названия";
-    if (albumTitle.isEmpty()) albumTitle = "Неизвестный альбом";
-    if (!trackYear.isEmpty()) albumTitle += " (" + trackYear + ")";
+    QString fallbackArtist = "Неизвестен";
+    QString fallbackTitle = "Без названия";
+
+    if (title.isEmpty() || artist.isEmpty()) {
+        // Пытаемся извлечь из имени файла
+        QString filePath = player->currentMedia().canonicalUrl().toLocalFile();
+        QFileInfo fileInfo(filePath);
+        QString baseName = fileInfo.completeBaseName(); // без расширения
+
+        // Попытка разбора: "Artist - Title"
+        QStringList parts = baseName.split(" - ");
+        if (parts.size() == 2) {
+            if (artist.isEmpty()) artist = parts[0].trimmed();
+            if (title.isEmpty()) title = parts[1].trimmed();
+        } else {
+            // Если нет разделителя, всё идёт в title
+            if (title.isEmpty()) title = baseName;
+        }
+    }
+
+    if (artist.isEmpty())
+        artist = fallbackArtist;
+    if (title.isEmpty())
+        title = fallbackTitle;
+    if (albumTitle.isEmpty())
+        albumTitle = "Неизвестный альбом";
+    if (!trackYear.isEmpty() && trackYear != 0)
+        albumTitle += " (" + trackYear + ")";
 
     trackTitleLabel->setText(artist + " - " + title);
     albumTitleLabel->setText(albumTitle);
@@ -392,6 +416,7 @@ void AudioPlayer::updateMetaData()
     QPixmap scaled = pixmap.scaled(coverArtLabel->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
     coverArtLabel->setPixmap(scaled);
 }
+
 
 void AudioPlayer::applyStyles()
 {
